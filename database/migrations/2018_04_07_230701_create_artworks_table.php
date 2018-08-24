@@ -15,8 +15,9 @@ class CreateArtworksTable extends Migration
             $table->integer('pageviews')->unsigned()->nullable();
 
             // TODO: Move these to a separate model? Perhaps with morphable?
-            $table->dateTime('imported_from_aggregator_at')->nullable();
-            $table->dateTime('imported_from_analytics_at')->nullable();
+            $table->dateTime('indexed_at')->nullable();
+            $table->dateTime('imported_at')->nullable();
+            $table->dateTime('analyzed_at')->nullable();
 
             $table->timestamps();
         });

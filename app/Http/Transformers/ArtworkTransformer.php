@@ -14,6 +14,8 @@ class ArtworkTransformer extends AbstractTransformer
             'id' => $artwork->id,
             'title' => $artwork->title,
             'pageviews' => $artwork->pageviews,
+            'indexed_at' => $artwork->indexed_at,
+            'imported_at' => $artwork->imported_at,
 
             // TODO: Dates?
         ];
