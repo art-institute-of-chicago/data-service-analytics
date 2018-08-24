@@ -16,9 +16,9 @@ trait ImportsData
 
     }
 
-    protected function query( $endpoint, $page = 1, $limit = 500 )
+    protected function query( $endpoint, $page = 1, $limit = 100 )
     {
-        $url = env('API_URL') . '/' . $endpoint . '?page=' . $page . '&limit=' . $limit . '&fields=id,title,timestamp';
+        $url = env('API_URL') . '/' . $endpoint . '?page=' . $page . '&limit=' . $limit . '&fields=id,title';
 
         $this->info( 'Querying: ' . $url );
 
