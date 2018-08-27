@@ -2,6 +2,9 @@
 
 namespace App\Console\Commands;
 
+use League\Csv\Writer;
+use Illuminate\Support\Facades\Storage;
+
 use Google_Client as Client;
 use Google_Service_AnalyticsReporting as AnalyticsReportingService;
 use Google_Service_AnalyticsReporting_DateRange as DateRange;
@@ -26,11 +29,27 @@ class ImportAnalytics extends AbstractCommand
 
     private $request;
 
+    private $filename = 'artwork-pageviews.csv';
+
+    private $csv;
+
     public function handle()
     {
+
+        ini_set("memory_limit", "-1");
+
         // Grab our config slash envars
         $this->viewId = env('GOOGLE_API_VIEW_ID');
         $this->authPath = storage_path(env('GOOGLE_API_AUTH_PATH'));
+
+        // Prepare the CSV file
+        $this->csv = Writer::createFromPath( $this->getCsvPath(), 'w' );
+
+        // Mirror headers as exported from GA dashboard
+        $this->csv->insertOne([
+            'Page',
+            'Pageviews'
+        ]);
 
         // Create a client instance
         $client = new Client();
@@ -158,9 +177,26 @@ class ImportAnalytics extends AbstractCommand
             $metrics = $row->getMetrics();
 
             // TODO: Actually write this to CSV file
-            $this->info( $dimensions[0] . ',' . $metrics[0]->getValues()[0] );
+            $pagePath = $dimensions[0];
+            $pageViews = $metrics[0]->getValues()[0];
+
+            $this->info( $pagePath . ',' . $pageViews );
+
+            $row = [
+                'Page' => $pagePath,
+                'Pageviews' => $pageViews,
+            ];
+
+            $this->csv->insertOne($row);
 
         }
+
+    }
+
+    private function getCsvPath()
+    {
+
+        return Storage::disk('local')->getDriver()->getAdapter()->getPathPrefix() . $this->filename;
 
     }
 
