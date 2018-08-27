@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use Carbon\Carbon;
 use League\Csv\Writer;
 use Illuminate\Support\Facades\Storage;
 
@@ -86,7 +87,7 @@ class ImportAnalytics extends AbstractCommand
             '# ----------------------------------------',
             '# Collections (excluding exhibitions)',
             '# Top Artworks',
-            '# 20100101-20180419',
+            '# 20100101-' . (new Carbon())->format('Ymd'),
             '# ----------------------------------------',
             '',
             '',
