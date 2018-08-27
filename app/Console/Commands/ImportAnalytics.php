@@ -76,7 +76,23 @@ class ImportAnalytics extends AbstractCommand
 
             $nextPageToken = $report->getNextPageToken();
 
+            // Uncomment this for debug:
+            $nextPageToken = null;
+
         } while (isset($nextPageToken));
+
+        // Prepend an info header to match GA dashboard export
+        $infoHeader = [
+            '# ----------------------------------------',
+            '# Collections (excluding exhibitions)',
+            '# Top Artworks',
+            '# 20100101-20180419',
+            '# ----------------------------------------',
+            '',
+            '',
+        ];
+
+        $this->prepend(implode(PHP_EOL, $infoHeader), $this->getCsvPath());
 
     }
 
@@ -198,6 +214,20 @@ class ImportAnalytics extends AbstractCommand
 
         return Storage::disk('local')->getDriver()->getAdapter()->getPathPrefix() . $this->filename;
 
+    }
+
+    // https://stackoverflow.com/a/1760579
+    private function prepend($string, $orig_filename) {
+        $context = stream_context_create();
+        $orig_file = fopen($orig_filename, 'r', 1, $context);
+
+        $temp_filename = tempnam(sys_get_temp_dir(), 'php_prepend_');
+        file_put_contents($temp_filename, $string);
+        file_put_contents($temp_filename, $orig_file, FILE_APPEND);
+
+        fclose($orig_file);
+        unlink($orig_filename);
+        rename($temp_filename, $orig_filename);
     }
 
 }
