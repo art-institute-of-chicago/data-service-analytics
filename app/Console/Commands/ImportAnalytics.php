@@ -206,7 +206,7 @@ class ImportAnalytics extends AbstractCommand
 
             $row = [
                 'Page' => $pagePath,
-                'Pageviews' => $pageViews,
+                'Pageviews' => number_format($pageViews),
             ];
 
             $this->csv->insertOne($row);
