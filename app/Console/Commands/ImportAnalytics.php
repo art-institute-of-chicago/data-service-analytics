@@ -139,7 +139,7 @@ class ImportAnalytics extends AbstractCommand
         $dimensionFilter = new DimensionFilter();
         $dimensionFilter->setDimensionName('ga:pagePath');
         $dimensionFilter->setOperator('REGEXP');
-        $dimensionFilter->setExpressions('/aic/collections/artwork/[0-9]+$');
+        $dimensionFilter->setExpressions('^/aic/collections/artwork/[0-9]+$');
 
         $dimensionFilterClause = new DimensionFilterClause();
         $dimensionFilterClause->setFilters($dimensionFilter);
