@@ -202,6 +202,12 @@ class ImportAnalytics extends AbstractCommand
             $pagePath = $dimensions[0];
             $pageViews = $metrics[0]->getValues()[0];
 
+            // GA is case-insensitive, but we want to avoid duplicate entries
+            if ($pagePath !== strtolower($pagePath)) {
+                $this->warn( 'Skipped ' . $pagePath );
+                continue;
+            }
+
             $this->info( $pagePath . ',' . $pageViews );
 
             $row = [
