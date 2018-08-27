@@ -65,11 +65,13 @@ class ImportAnalytics extends AbstractCommand
 
         do {
 
+            $this->warn("Requesting items using page token: " . $nextPageToken);
+
             // Get our request definition
             $request = $this->getPaginatedRequest($nextPageToken);
 
             // Use this while developing:
-            $request->setPageSize(20);
+            // $request->setPageSize(20);
 
             $report = $this->getReport($request, $analytics);
 
@@ -78,7 +80,10 @@ class ImportAnalytics extends AbstractCommand
             $nextPageToken = $report->getNextPageToken();
 
             // Uncomment this for debug:
-            $nextPageToken = null;
+            // $nextPageToken = null;
+
+            // Sleep for 1.2 seconds to avoid pummeling the API
+            usleep(1200000);
 
         } while (isset($nextPageToken));
 
