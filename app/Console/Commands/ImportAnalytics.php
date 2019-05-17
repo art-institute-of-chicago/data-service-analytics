@@ -2,11 +2,14 @@
 
 namespace App\Console\Commands;
 
+use App\Artwork;
 use Carbon\Carbon;
 use League\Csv\Writer;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
 
 use Google_Client as Client;
+use Google_Http_Batch as Batch;
 use Google_Service_AnalyticsReporting as AnalyticsReportingService;
 use Google_Service_AnalyticsReporting_DateRange as DateRange;
 use Google_Service_AnalyticsReporting_Dimension as Dimension;
@@ -28,9 +31,9 @@ class ImportAnalytics extends AbstractCommand
 
     private $authPath;
 
-    private $request;
-
     private $filename = 'artwork-pageviews.csv';
+
+    private $pageviews = [];
 
     private $csv;
 
@@ -53,39 +56,59 @@ class ImportAnalytics extends AbstractCommand
         ]);
 
         // Create a client instance
-        $client = new Client();
-        $client->setApplicationName('Analytics Data Service');
-        $client->setAuthConfig($this->authPath);
-        $client->setScopes(['https://www.googleapis.com/auth/analytics.readonly']);
+        $client = $this->getClient();
 
         // Create a service instance
         $analytics = new AnalyticsReportingService($client);
 
-        $nextPageToken = null;
+        $sleep = 2000000;
+        $sleepMultiplier = 1;
 
-        do {
+        // Batch queries in groups of 5, to stay below the Google API limit
+        // of 10 queries per second per IP address
+        // This loop could probably go on for hundreds of thousands of records.
+        // We'll take the first 200,000 results as a pretty good gauge of
+        // the metrics.
+        for ($pageToken = 0; $pageToken <= 200000; $pageToken += 5000) {
 
-            $this->warn("Requesting items using page token: " . $nextPageToken);
+            $this->info('Working on batch ' .$pageToken);
 
-            // Get our request definition
-            $request = $this->getPaginatedRequest($nextPageToken);
+            $batch = $analytics->createBatch();
+            $batch = $this->addToBatch($batch, $pageToken, $analytics);
 
-            // Use this while developing:
-            // $request->setPageSize(20);
+            $results = $batch->execute();
 
-            $report = $this->getReport($request, $analytics);
+            if (!$this->isSuccessful($results)) {
+                // Sleep for exponentially more time and try again
+                $sleepFor = ($sleep * $sleepMultiplier) + rand(1000, 1000000);
+                $this->info("Sleeping for " .number_format($sleepFor/1000000,3) ." seconds before trying again");
+                usleep($sleepFor);
+                $sleepMultiplier *= 2;
 
-            $this->saveReport($report);
+                // Get a new client to refresh the auth tokens
+                $client = $this->getClient();
+                $analytics = new AnalyticsReportingService($client);
 
-            $nextPageToken = $report->getNextPageToken();
+                $batch = $analytics->createBatch();
+                $batch = $this->addToBatch($batch, $pageToken, $analytics);
 
-            // Uncomment this for debug:
-            // $nextPageToken = null;
+                $results = $batch->execute();
+                if (!$this->isSuccessful($results)) {
+                    throw new \Exception("Too many errors for this run.");
+                }
+            }
 
-            // Sleep for 1.2 seconds to avoid pummeling the API
-            usleep(1200000);
+            if ($this->isDone($results)) {
+                break;
+            }
 
-        } while (isset($nextPageToken));
+            $this->tally($results);
+
+            // Sleep for 1+ second to avoid pummeling the API
+            usleep(1000000 + rand(1000, 1000000));
+        }
+
+        $this->saveReport();
 
         // Prepend an info header to match GA dashboard export
         $infoHeader = [
@@ -102,32 +125,24 @@ class ImportAnalytics extends AbstractCommand
 
     }
 
-    /**
-     * This modifies the instance $request object, but because we pass it a new
-     * $nextPageToken each time, there's no effect in practice.
-     */
-    private function getPaginatedRequest($nextPageToken = null) {
+    private function getClient() {
+        $client = new Client();
+        $client->setApplicationName('Analytics Data Service');
+        $client->setAuthConfig($this->authPath);
+        $client->setScopes(['https://www.googleapis.com/auth/analytics.readonly']);
+        $client->setUseBatch(TRUE);
 
-        $request = $this->getRequest();
-
-        $request->setPageToken($nextPageToken);
-
-        return $request;
-
+        return $client;
     }
 
-    private function getRequest() {
-
-        if ($this->request) {
-            return $this->request;
-        }
+    private function getRequest($startDate = '2010-01-01') {
 
         // Create the DateRange object
         $dateRange = new DateRange();
-        $dateRange->setStartDate('2010-01-01');
+        $dateRange->setStartDate($startDate);
         $dateRange->setEndDate('today');
 
-        //Create the Dimensions object
+        // Create the Dimensions object
         $dimension = new Dimension();
         $dimension->setName('ga:pagePath');
 
@@ -139,7 +154,7 @@ class ImportAnalytics extends AbstractCommand
         $dimensionFilter = new DimensionFilter();
         $dimensionFilter->setDimensionName('ga:pagePath');
         $dimensionFilter->setOperator('REGEXP');
-        $dimensionFilter->setExpressions('^/aic/collections/artwork/[0-9]+$');
+        $dimensionFilter->setExpressions('artwork[s]?/[0-9]+');
 
         $dimensionFilterClause = new DimensionFilterClause();
         $dimensionFilterClause->setFilters($dimensionFilter);
@@ -161,11 +176,40 @@ class ImportAnalytics extends AbstractCommand
 
         $request->setSamplingLevel('SMALL');
 
-        // Save the request instance for minor memory gains
-        $this->request = $request;
+        return $request;
+
+    }
+
+    /**
+     * This modifies the instance $request object, but because we pass it a new
+     * $nextPageToken each time, there's no effect in practice.
+     */
+    private function getPaginatedRequest($nextPageToken = null) {
+
+        $request = $this->getRequest();
+
+        $request->setPageToken($nextPageToken);
 
         return $request;
 
+    }
+
+    private function addToBatch($batch, $pageToken, $analytics) {
+
+        // Batch five pages of queries together
+        for ($i = 0; $i < 5; $i++) {
+            $request = null;
+            if ($pageToken == 0 && $i == 0) {
+                $request = $this->getPaginatedRequest(null);
+            }
+            else {
+                $request = $this->getPaginatedRequest("" .(($i*1000) + $pageToken));
+            }
+            $report = $this->getReport($request, $analytics);
+            $batch->add($report, "starting-at-".(($i*1000) + $pageToken));
+        }
+
+        return $batch;
     }
 
     private function getReport($request, $analytics) {
@@ -175,47 +219,80 @@ class ImportAnalytics extends AbstractCommand
         $body->setReportRequests( array($request) );
 
         // Issue the request and grab the response
-        $reports = $analytics->reports->batchGet($body);
-
-        // We are only interested in one report
-        $report = $reports[0];
-
-        return $report;
+        return $analytics->reports->batchGet($body);
 
     }
 
-    private function saveReport($report) {
+    private function isSuccessful($results) {
+        foreach ($results as $batchResult) {
+            if (!property_exists($batchResult, 'reports')) {
+                \Log::info($batchResult->getMessage());
+                return false;
+            }
+        }
 
-        $header = $report->getColumnHeader();
+        return true;
+    }
 
-        $dimensionHeaders = $header->getDimensions();
-        $metricHeaders = $header->getMetricHeader()->getMetricHeaderEntries();
+    private function isDone($results) {
 
-        $rows = $report->getData()->getRows();
+        $rows = 0;
+        foreach ($results as $batchResult) {
+            $report = $batchResult->reports[0];
 
-        foreach( $rows as $row ) {
+            $rows += count($report->getData()->getRows());
+        }
 
-            $dimensions = $row->getDimensions();
-            $metrics = $row->getMetrics();
+        return $rows == 0;
 
-            // TODO: Actually write this to CSV file
-            $pagePath = $dimensions[0];
-            $pageViews = $metrics[0]->getValues()[0];
+    }
 
-            // GA is case-insensitive, but we want to avoid duplicate entries
-            if ($pagePath !== strtolower($pagePath)) {
-                $this->warn( 'Skipped ' . $pagePath );
-                continue;
+    private function tally($results) {
+
+        foreach ($results as $batchResult) {
+            $report = $batchResult->reports[0];
+
+            $rows = $report->getData()->getRows();
+            foreach( $rows as $row ) {
+                $dimensions = $row->getDimensions();
+                $metrics = $row->getMetrics();
+
+                $path = $dimensions[0];
+                $views = $metrics[0]->getValues()[0];
+
+                preg_match('/artwork[s]?\/([0-9]+)/', $path, $matches);
+
+                if ($matches) {
+                    if (!Arr::has($this->pageviews, $matches[1])) {
+                        $this->pageviews[$matches[1]] = 0;
+                    }
+                    $this->pageviews[$matches[1]] += $views;
+                }
             }
 
-            $this->info( $pagePath . ',' . $pageViews );
+        }
 
-            $row = [
-                'Page' => $pagePath,
-                'Pageviews' => number_format($pageViews),
-            ];
+    }
 
-            $this->csv->insertOne($row);
+    private function saveReport() {
+
+        foreach( $this->pageviews as $objectId => $views ) {
+
+            if ($objectId) {
+
+                // Save to DB
+                $artwork = Artwork::firstOrNew(['id' => $objectId]);
+                $artwork->pageviews = $views;
+                $artwork->save();
+
+                $row = [
+                    'Page' => '/artworks/' .$objectId,
+                    'Pageviews' => number_format($views),
+                ];
+
+                $this->csv->insertOne($row);
+
+            }
 
         }
 
