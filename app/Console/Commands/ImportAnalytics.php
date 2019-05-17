@@ -77,13 +77,17 @@ class ImportAnalytics extends AbstractCommand
             $batch = $this->addToBatch($batch, $pageToken, $analytics);
 
             $results = $batch->execute();
+            $tries = 1;
 
-            if (!$this->isSuccessful($results)) {
+            while (!$this->isSuccessful($results) && $tries <= 4) {
                 // Sleep for exponentially more time and try again
                 $sleepFor = ($sleep * $sleepMultiplier) + rand(1000, 1000000);
                 $this->info("Sleeping for " .number_format($sleepFor/1000000,3) ." seconds before trying again");
                 usleep($sleepFor);
                 $sleepMultiplier *= 2;
+                if ($sleepMultiplier >= 512) {
+                    $sleepMultiplier = 1;
+                }
 
                 // Get a new client to refresh the auth tokens
                 $client = $this->getClient();
@@ -93,9 +97,10 @@ class ImportAnalytics extends AbstractCommand
                 $batch = $this->addToBatch($batch, $pageToken, $analytics);
 
                 $results = $batch->execute();
-                if (!$this->isSuccessful($results)) {
-                    throw new \Exception("Too many errors for this run.");
-                }
+            }
+
+            if (!$this->isSuccessful($results)) {
+                throw new \Exception("Too many errors for this run.");
             }
 
             if ($this->isDone($results)) {
