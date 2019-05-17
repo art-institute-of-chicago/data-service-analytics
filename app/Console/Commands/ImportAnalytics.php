@@ -27,15 +27,15 @@ class ImportAnalytics extends AbstractCommand
 
     protected $description = 'Imports analytics from Google';
 
-    private $viewId;
+    protected $viewId;
 
-    private $authPath;
+    protected $authPath;
 
-    private $filename = 'artwork-pageviews.csv';
+    protected $filename = 'artwork-pageviews.csv';
 
-    private $pageviews = [];
+    protected $pageviews = [];
 
-    private $csv;
+    protected $csv;
 
     public function handle()
     {
@@ -130,7 +130,7 @@ class ImportAnalytics extends AbstractCommand
 
     }
 
-    private function getClient() {
+    protected function getClient() {
         $client = new Client();
         $client->setApplicationName('Analytics Data Service');
         $client->setAuthConfig($this->authPath);
@@ -140,7 +140,7 @@ class ImportAnalytics extends AbstractCommand
         return $client;
     }
 
-    private function getRequest($startDate = '2010-01-01') {
+    protected function getRequest($startDate = '2010-01-01') {
 
         // Create the DateRange object
         $dateRange = new DateRange();
@@ -189,9 +189,9 @@ class ImportAnalytics extends AbstractCommand
      * This modifies the instance $request object, but because we pass it a new
      * $nextPageToken each time, there's no effect in practice.
      */
-    private function getPaginatedRequest($nextPageToken = null) {
+    protected function getPaginatedRequest($nextPageToken = null, $startDate = '2010-01-01') {
 
-        $request = $this->getRequest();
+        $request = $this->getRequest($startDate);
 
         $request->setPageToken($nextPageToken);
 
@@ -199,16 +199,16 @@ class ImportAnalytics extends AbstractCommand
 
     }
 
-    private function addToBatch($batch, $pageToken, $analytics) {
+    protected function addToBatch($batch, $pageToken, $analytics, $startDate = '2010-01-01') {
 
         // Batch five pages of queries together
         for ($i = 0; $i < 5; $i++) {
             $request = null;
             if ($pageToken == 0 && $i == 0) {
-                $request = $this->getPaginatedRequest(null);
+                $request = $this->getPaginatedRequest(null, $startDate);
             }
             else {
-                $request = $this->getPaginatedRequest("" .(($i*1000) + $pageToken));
+                $request = $this->getPaginatedRequest("" .(($i*1000) + $pageToken), $startDate);
             }
             $report = $this->getReport($request, $analytics);
             $batch->add($report, "starting-at-".(($i*1000) + $pageToken));
@@ -217,7 +217,7 @@ class ImportAnalytics extends AbstractCommand
         return $batch;
     }
 
-    private function getReport($request, $analytics) {
+    protected function getReport($request, $analytics) {
 
         // Wrap our request in a multi-request clause (required?)
         $body = new GetReportsRequest();
@@ -228,7 +228,7 @@ class ImportAnalytics extends AbstractCommand
 
     }
 
-    private function isSuccessful($results) {
+    protected function isSuccessful($results) {
         foreach ($results as $batchResult) {
             if (!property_exists($batchResult, 'reports')) {
                 \Log::info($batchResult->getMessage());
@@ -239,7 +239,7 @@ class ImportAnalytics extends AbstractCommand
         return true;
     }
 
-    private function isDone($results) {
+    protected function isDone($results) {
 
         $rows = 0;
         foreach ($results as $batchResult) {
@@ -252,7 +252,7 @@ class ImportAnalytics extends AbstractCommand
 
     }
 
-    private function tally($results) {
+    protected function tally($results) {
 
         foreach ($results as $batchResult) {
             $report = $batchResult->reports[0];
@@ -279,7 +279,7 @@ class ImportAnalytics extends AbstractCommand
 
     }
 
-    private function saveReport() {
+    protected function saveReport() {
 
         foreach( $this->pageviews as $objectId => $views ) {
 
@@ -303,7 +303,7 @@ class ImportAnalytics extends AbstractCommand
 
     }
 
-    private function getCsvPath()
+    protected function getCsvPath()
     {
 
         return Storage::disk('local')->getDriver()->getAdapter()->getPathPrefix() . $this->filename;
@@ -311,7 +311,7 @@ class ImportAnalytics extends AbstractCommand
     }
 
     // https://stackoverflow.com/a/1760579
-    private function prepend($string, $orig_filename) {
+    protected function prepend($string, $orig_filename) {
         $context = stream_context_create();
         $orig_file = fopen($orig_filename, 'r', 1, $context);
 
