@@ -97,6 +97,7 @@ class ImportAnalytics extends AbstractCommand
                 $batch = $this->addToBatch($batch, $pageToken, $analytics);
 
                 $results = $batch->execute();
+                $tries++;
             }
 
             if (!$this->isSuccessful($results)) {
