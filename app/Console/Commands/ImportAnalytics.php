@@ -85,7 +85,7 @@ class ImportAnalytics extends AbstractCommand
                 $this->info("Sleeping for " .number_format($sleepFor/1000000,3) ." seconds before trying again");
                 usleep($sleepFor);
                 $sleepMultiplier *= 2;
-                if ($sleepMultiplier >= 512) {
+                if ($sleepMultiplier >= 1024) {
                     $sleepMultiplier = 1;
                 }
 
@@ -232,7 +232,7 @@ class ImportAnalytics extends AbstractCommand
     protected function isSuccessful($results) {
         foreach ($results as $batchResult) {
             if (!property_exists($batchResult, 'reports')) {
-                \Log::info($batchResult->getMessage());
+                \Log::info(print_r($batchResult, true));
                 return false;
             }
         }
