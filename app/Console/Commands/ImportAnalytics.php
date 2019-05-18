@@ -232,7 +232,12 @@ class ImportAnalytics extends AbstractCommand
     protected function isSuccessful($results) {
         foreach ($results as $batchResult) {
             if (!property_exists($batchResult, 'reports')) {
-                \Log::info(get_class($batchResult));
+                if ($batchResult->getCode() == 429
+                    && $batchResult->getErrors()
+                    && $batchResult->getErrors()[0]['reason'] == 'rateLimitExceeded') {
+                    // Hard stop if quota limit has been exceeded
+                    throw new \Exception($batchResult->getErrors()[0]['message']);
+                }
                 return false;
             }
         }
