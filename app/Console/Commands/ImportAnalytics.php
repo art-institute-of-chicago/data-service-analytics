@@ -79,13 +79,13 @@ class ImportAnalytics extends AbstractCommand
             $results = $batch->execute();
             $tries = 1;
 
-            while (!$this->isSuccessful($results) && $tries <= 4) {
+            while (!$this->isSuccessful($results) && $tries <= 10) {
                 // Sleep for exponentially more time and try again
                 $sleepFor = ($sleep * $sleepMultiplier) + rand(1000, 1000000);
                 $this->info("Sleeping for " .number_format($sleepFor/1000000,3) ." seconds before trying again");
                 usleep($sleepFor);
                 $sleepMultiplier *= 2;
-                if ($sleepMultiplier >= 1024) {
+                if ($sleepMultiplier >= 2048) {
                     $sleepMultiplier = 1;
                 }
 
