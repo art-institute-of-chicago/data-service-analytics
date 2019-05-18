@@ -232,7 +232,7 @@ class ImportAnalytics extends AbstractCommand
     protected function isSuccessful($results) {
         foreach ($results as $batchResult) {
             if (!property_exists($batchResult, 'reports')) {
-                \Log::info(print_r($batchResult, true));
+                \Log::info(get_class($batchResult));
                 return false;
             }
         }
