@@ -235,8 +235,8 @@ class ImportAnalytics extends AbstractCommand
                 if ($batchResult->getCode() == 429
                     && $batchResult->getErrors()
                     && $batchResult->getErrors()[0]['reason'] == 'rateLimitExceeded') {
-                    // Hard stop if quota limit has been exceeded
-                    throw new \Exception($batchResult->getErrors()[0]['message']);
+                    $this->info('Sleep 24 hours before trying again');
+                    usleep(1000000*60*60*24 + rand(1000, 1000000));
                 }
                 return false;
             }
