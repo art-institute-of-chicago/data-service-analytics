@@ -24,18 +24,24 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
+        // Import artworks once a week
         $schedule->command('import:artworks')
-            ->weeklyOn(7, '1:00')
+            ->weekly()->saturdays()->at('1:00')
             ->withoutOverlapping()
             ->sendOutputTo(storage_path('logs/import-artworks-last-run.log'));
 
+        // Import all historic analytics in production once a week
+        // We only run this in production to save calls to the Google API
         $schedule->command('import:analytics')
-            ->weeklyOn(1, '1:00')
+            ->environments(['production'])
+            ->weekly()->sundays()->at('1:00')
             ->withoutOverlapping()
             ->sendOutputTo(storage_path('logs/import-analytics-last-run.log'));
 
+        // Run the last-three-months metrics every weekday, also only in production
         $schedule->command('import:analytics-short-term')
-            ->weeklyOn(2, '1:00')
+            ->environments(['production'])
+            ->weekdays()->at('1:00')
             ->withoutOverlapping()
             ->sendOutputTo(storage_path('logs/import-analytics-short-term-last-run.log'));
     }
