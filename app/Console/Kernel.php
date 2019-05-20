@@ -26,7 +26,7 @@ class Kernel extends ConsoleKernel
     {
         // Import artworks once a week
         $schedule->command('import:artworks')
-            ->weekly()->saturdays()->at('1:00')
+            ->weekly()->saturdays()->at('0:00')
             ->withoutOverlapping()
             ->sendOutputTo(storage_path('logs/import-artworks-last-run.log'));
 
@@ -34,14 +34,14 @@ class Kernel extends ConsoleKernel
         // We only run this in production to save calls to the Google API
         $schedule->command('import:analytics')
             ->environments(['production'])
-            ->weekly()->sundays()->at('1:00')
+            ->weekly()->saturdays()->at('1:00')
             ->withoutOverlapping()
             ->sendOutputTo(storage_path('logs/import-analytics-last-run.log'));
 
         // Run the last-three-months metrics every weekday, also only in production
         $schedule->command('import:analytics-short-term')
             ->environments(['production'])
-            ->weekdays()->at('1:00')
+            ->weekdays()->at('0:00')
             ->withoutOverlapping()
             ->sendOutputTo(storage_path('logs/import-analytics-short-term-last-run.log'));
     }
