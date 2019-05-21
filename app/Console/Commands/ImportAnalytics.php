@@ -71,7 +71,7 @@ class ImportAnalytics extends AbstractCommand
         // the metrics.
         for ($pageToken = 0; $pageToken <= 200000; $pageToken += 5000) {
 
-            $this->info('Working on batch ' .$pageToken);
+            $this->info(Carbon::now()->toDateTimeString() .': Working on batch ' .$pageToken);
 
             $batch = $analytics->createBatch();
             $batch = $this->addToBatch($batch, $pageToken, $analytics);
@@ -82,7 +82,7 @@ class ImportAnalytics extends AbstractCommand
             while (!$this->isSuccessful($results) && $tries <= 10) {
                 // Sleep for exponentially more time and try again
                 $sleepFor = ($sleep * $sleepMultiplier) + rand(1000, 1000000);
-                $this->info("Sleeping for " .number_format($sleepFor/1000000,3) ." seconds before trying again");
+                $this->info(Carbon::now()->toDateTimeString() .": Sleeping for " .number_format($sleepFor/1000000,3) ." seconds before trying again");
                 usleep($sleepFor);
                 $sleepMultiplier *= 2;
                 if ($sleepMultiplier >= 2048) {
@@ -235,7 +235,7 @@ class ImportAnalytics extends AbstractCommand
                 if ($batchResult->getCode() == 429
                     && $batchResult->getErrors()
                     && $batchResult->getErrors()[0]['reason'] == 'rateLimitExceeded') {
-                    $this->info('Sleep 24 hours before trying again');
+                    $this->info(Carbon::now()->toDateTimeString() .': Sleep 24 hours before trying again');
                     usleep(1000000*60*60*24 + rand(1000, 1000000));
                 }
                 return false;
