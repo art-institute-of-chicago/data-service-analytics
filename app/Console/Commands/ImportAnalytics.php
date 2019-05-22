@@ -41,6 +41,7 @@ class ImportAnalytics extends AbstractCommand
     {
 
         ini_set("memory_limit", "-1");
+        set_time_limit(0);
 
         // Grab our config slash envars
         $this->viewId = env('GOOGLE_API_VIEW_ID');
@@ -69,7 +70,7 @@ class ImportAnalytics extends AbstractCommand
         // This loop could probably go on for hundreds of thousands of records.
         // We'll take the first 200,000 results as a pretty good gauge of
         // the metrics.
-        for ($pageToken = 0; $pageToken <= 200000; $pageToken += 5000) {
+        for ($pageToken = 0; $pageToken <= 400000; $pageToken += 5000) {
 
             $this->info(Carbon::now()->toDateTimeString() .': Working on batch ' .$pageToken);
 
@@ -235,8 +236,8 @@ class ImportAnalytics extends AbstractCommand
                 if ($batchResult->getCode() == 429
                     && $batchResult->getErrors()
                     && $batchResult->getErrors()[0]['reason'] == 'rateLimitExceeded') {
-                    $this->info(Carbon::now()->toDateTimeString() .': Sleep 24 hours before trying again');
-                    usleep(1000000*60*60*24 + rand(1000, 1000000));
+                    $this->info(Carbon::now()->toDateTimeString() .': Rate limit exceeded. Sleep one hour before trying again');
+                    usleep(1000000*60*60 + rand(1000, 1000000));
                 }
                 return false;
             }
