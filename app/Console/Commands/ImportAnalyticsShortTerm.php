@@ -10,14 +10,14 @@ use Illuminate\Support\Facades\Storage;
 
 use Google_Service_AnalyticsReporting as AnalyticsReportingService;
 
-class ImportAnalyticsShortTerm extends ImportAnalytics
+class ImportAnalyticsRecent extends ImportAnalytics
 {
 
-    protected $signature = 'import:analytics-short-term';
+    protected $signature = 'import:analytics-recent';
 
     protected $description = 'Imports last-three-months analytics from Google';
 
-    protected $filename = 'artwork-pageviews-three-months.csv';
+    protected $filename = 'artwork-pageviews-recent.csv';
 
     public function handle()
     {
@@ -120,7 +120,7 @@ class ImportAnalyticsShortTerm extends ImportAnalytics
 
                 // Save to DB
                 $artwork = Artwork::firstOrNew(['id' => $objectId]);
-                $artwork->pageviews_short_term = $views;
+                $artwork->pageviews_recent = $views;
                 $artwork->save();
 
                 $row = [
