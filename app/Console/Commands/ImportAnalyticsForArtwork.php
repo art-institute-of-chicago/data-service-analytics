@@ -188,8 +188,8 @@ class ImportAnalyticsForArtwork extends AbstractCommand
                 if ($batchResult->getCode() == 429
                     && $batchResult->getErrors()
                     && $batchResult->getErrors()[0]['reason'] == 'rateLimitExceeded') {
-                    $this->info(Carbon::now()->toDateTimeString() .': Rate limit exceeded. Sleep one hour before trying again');
-                    usleep(1000000*60*60 + rand(1000, 1000000));
+                    $this->info(Carbon::now()->toDateTimeString() .': Rate limit exceeded. Sleep two hours before trying again');
+                    usleep(1000000*60*60*2 + rand(1000, 1000000));
                 }
                 return false;
             }
