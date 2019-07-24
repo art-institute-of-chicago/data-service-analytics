@@ -30,20 +30,25 @@ class Kernel extends ConsoleKernel
             ->withoutOverlapping()
             ->sendOutputTo(storage_path('logs/import-artworks-last-run.log'));
 
-        // Import all historic analytics in production once a week
-        // We only run this in production to save calls to the Google API
-        $schedule->command('import:analytics-for-artworks-all')
-            ->environments(['production'])
-            ->weekly()->saturdays()->at('1:00')
-            ->withoutOverlapping()
-            ->sendOutputTo(storage_path('logs/import-analytics-last-run.log'));
-
         // Run the last-three-months metrics every weekday, also only in production
         $schedule->command('import:analytics-recent')
             ->environments(['production'])
             ->weekdays()->at('0:00')
             ->withoutOverlapping()
             ->sendOutputTo(storage_path('logs/import-analytics-recent-last-run.log'));
+
+        // Import all historic analytics in production once a week
+        // We only run this in production to save calls to the Google API
+        //
+        // This takes days to run and breaks part of the way through.
+        // For now, run this periodically when we can monitor the import,
+        // nudge it along, and make more improvements for efficiency.
+        //
+        // $schedule->command('import:analytics-for-artworks-all')
+        //     ->environments(['production'])
+        //     ->weekly()->saturdays()->at('1:00')
+        //     ->withoutOverlapping()
+        //     ->sendOutputTo(storage_path('logs/import-analytics-last-run.log'));
     }
 
     /**
