@@ -4,7 +4,6 @@ namespace App\Console\Commands;
 
 use App\Artwork;
 use Carbon\Carbon;
-use League\Csv\Writer;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
 
@@ -17,8 +16,6 @@ class ImportAnalyticsRecent extends ImportAnalytics
 
     protected $description = 'Imports last-three-months analytics from Google';
 
-    protected $filename = 'artwork-pageviews-recent.csv';
-
     public function handle()
     {
 
@@ -27,15 +24,6 @@ class ImportAnalyticsRecent extends ImportAnalytics
         // Grab our config slash envars
         $this->viewId = env('GOOGLE_API_VIEW_ID');
         $this->authPath = storage_path(env('GOOGLE_API_AUTH_PATH'));
-
-        // Prepare the CSV file
-        $this->csv = Writer::createFromPath( $this->getCsvPath(), 'w' );
-
-        // Mirror headers as exported from GA dashboard
-        $this->csv->insertOne([
-            'Page',
-            'Pageviews'
-        ]);
 
         // Create a client instance
         $client = $this->getClient();
@@ -96,20 +84,6 @@ class ImportAnalyticsRecent extends ImportAnalytics
         }
 
         $this->saveReport();
-
-        // Prepend an info header to match GA dashboard export
-        $infoHeader = [
-            '# ----------------------------------------',
-            '# Collections (excluding exhibitions)',
-            '# Top Artworks',
-            '# ' .Carbon::now()->subMonths(3)->format('Ymd') .'-' . (new Carbon())->format('Ymd'),
-            '# ----------------------------------------',
-            '',
-            '',
-        ];
-
-        $this->prepend(implode(PHP_EOL, $infoHeader), $this->getCsvPath());
-
     }
 
     protected function saveReport() {
@@ -122,14 +96,6 @@ class ImportAnalyticsRecent extends ImportAnalytics
                 $artwork = Artwork::firstOrNew(['id' => $objectId]);
                 $artwork->pageviews_recent = $views;
                 $artwork->save();
-
-                $row = [
-                    'Page' => '/artworks/' .$objectId,
-                    'Pageviews' => number_format($views),
-                ];
-
-                $this->csv->insertOne($row);
-
             }
 
         }
