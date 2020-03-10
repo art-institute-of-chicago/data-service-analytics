@@ -12,12 +12,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/art-institute-of-chicago/data-hub-foundation.git",
-                "reference": "f02a0fddee0c23c1143c2d1d0824225aa11957db"
+                "reference": "51a90fb9bff5a1ea43f180b2168ce6dcf6c2cfd1"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/art-institute-of-chicago/data-hub-foundation/zipball/f02a0fddee0c23c1143c2d1d0824225aa11957db",
-                "reference": "f02a0fddee0c23c1143c2d1d0824225aa11957db",
+                "url": "https://api.github.com/repos/art-institute-of-chicago/data-hub-foundation/zipball/51a90fb9bff5a1ea43f180b2168ce6dcf6c2cfd1",
+                "reference": "51a90fb9bff5a1ea43f180b2168ce6dcf6c2cfd1",
                 "shasum": ""
             },
             "require": {
@@ -50,7 +50,7 @@
                 "source": "https://github.com/art-institute-of-chicago/data-hub-foundation/tree/master",
                 "issues": "https://github.com/art-institute-of-chicago/data-hub-foundation/issues"
             },
-            "time": "2020-03-10T19:33:04+00:00"
+            "time": "2020-03-10T21:46:39+00:00"
         },
         {
             "name": "clue/stream-filter",
