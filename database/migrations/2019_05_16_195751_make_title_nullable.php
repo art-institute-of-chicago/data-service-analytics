@@ -26,7 +26,7 @@ class MakeTitleNullable extends Migration
     public function down()
     {
         Schema::table('artworks', function (Blueprint $table) {
-            $table->text('title')->nullable(FALSE)->change();
+            $table->text('title')->nullable(false)->change();
         });
     }
 }

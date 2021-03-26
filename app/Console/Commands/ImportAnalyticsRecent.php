@@ -4,8 +4,6 @@ namespace App\Console\Commands;
 
 use App\Artwork;
 use Carbon\Carbon;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Storage;
 
 use Google_Service_AnalyticsReporting as AnalyticsReportingService;
 
@@ -19,7 +17,7 @@ class ImportAnalyticsRecent extends ImportAnalytics
     public function handle()
     {
 
-        ini_set("memory_limit", "-1");
+        ini_set('memory_limit', '-1');
 
         // Grab our config slash envars
         $this->viewId = env('GOOGLE_API_VIEW_ID');
@@ -41,7 +39,7 @@ class ImportAnalyticsRecent extends ImportAnalytics
         // the metrics.
         for ($pageToken = 0; $pageToken <= 200000; $pageToken += 5000) {
 
-            $this->info('Working on batch ' .$pageToken);
+            $this->info('Working on batch ' . $pageToken);
 
             $batch = $analytics->createBatch();
             $batch = $this->addToBatch($batch, $pageToken, $analytics, Carbon::now()->subMonths(3)->toDateString());
@@ -52,9 +50,10 @@ class ImportAnalyticsRecent extends ImportAnalytics
             while (!$this->isSuccessful($results) && $tries <= 4) {
                 // Sleep for exponentially more time and try again
                 $sleepFor = ($sleep * $sleepMultiplier) + rand(1000, 1000000);
-                $this->info("Sleeping for " .number_format($sleepFor/1000000,3) ." seconds before trying again");
+                $this->info('Sleeping for ' . number_format($sleepFor / 1000000, 3) . ' seconds before trying again');
                 usleep($sleepFor);
                 $sleepMultiplier *= 2;
+
                 if ($sleepMultiplier >= 512) {
                     $sleepMultiplier = 1;
                 }
@@ -70,7 +69,7 @@ class ImportAnalyticsRecent extends ImportAnalytics
             }
 
             if (!$this->isSuccessful($results)) {
-                throw new \Exception("Too many errors for this run.");
+                throw new \Exception('Too many errors for this run.');
             }
 
             if ($this->isDone($results)) {
@@ -88,7 +87,7 @@ class ImportAnalyticsRecent extends ImportAnalytics
 
     protected function saveReport() {
 
-        foreach( $this->pageviews as $objectId => $views ) {
+        foreach ($this->pageviews as $objectId => $views) {
 
             if ($objectId) {
 

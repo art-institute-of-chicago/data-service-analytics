@@ -40,7 +40,7 @@ class ImportAnalytics extends AbstractCommand
     public function handle()
     {
 
-        ini_set("memory_limit", "-1");
+        ini_set('memory_limit', '-1');
         set_time_limit(0);
 
         // Grab our config slash envars
@@ -48,12 +48,12 @@ class ImportAnalytics extends AbstractCommand
         $this->authPath = storage_path(env('GOOGLE_API_AUTH_PATH'));
 
         // Prepare the CSV file
-        $this->csv = Writer::createFromPath( $this->getCsvPath(), 'w' );
+        $this->csv = Writer::createFromPath($this->getCsvPath(), 'w');
 
         // Mirror headers as exported from GA dashboard
         $this->csv->insertOne([
             'Page',
-            'Pageviews'
+            'Pageviews',
         ]);
 
         // Create a client instance
@@ -72,7 +72,7 @@ class ImportAnalytics extends AbstractCommand
         // the metrics.
         for ($pageToken = 0; $pageToken <= 400000; $pageToken += 5000) {
 
-            $this->info(Carbon::now()->toDateTimeString() .': Working on batch ' .$pageToken);
+            $this->info(Carbon::now()->toDateTimeString() . ': Working on batch ' . $pageToken);
 
             $batch = $analytics->createBatch();
             $batch = $this->addToBatch($batch, $pageToken, $analytics);
@@ -83,9 +83,10 @@ class ImportAnalytics extends AbstractCommand
             while (!$this->isSuccessful($results) && $tries <= 10) {
                 // Sleep for exponentially more time and try again
                 $sleepFor = ($sleep * $sleepMultiplier) + rand(1000, 1000000);
-                $this->info(Carbon::now()->toDateTimeString() .": Sleeping for " .number_format($sleepFor/1000000,3) ." seconds before trying again");
+                $this->info(Carbon::now()->toDateTimeString() . ': Sleeping for ' . number_format($sleepFor / 1000000, 3) . ' seconds before trying again');
                 usleep($sleepFor);
                 $sleepMultiplier *= 2;
+
                 if ($sleepMultiplier >= 2048) {
                     $sleepMultiplier = 1;
                 }
@@ -102,7 +103,7 @@ class ImportAnalytics extends AbstractCommand
             }
 
             if (!$this->isSuccessful($results)) {
-                throw new \Exception("Too many errors for this run.");
+                throw new \Exception('Too many errors for this run.');
             }
 
             if ($this->isDone($results)) {
@@ -137,7 +138,7 @@ class ImportAnalytics extends AbstractCommand
         $client->setApplicationName('Analytics Data Service');
         $client->setAuthConfig($this->authPath);
         $client->setScopes(['https://www.googleapis.com/auth/analytics.readonly']);
-        $client->setUseBatch(TRUE);
+        $client->setUseBatch(true);
 
         return $client;
     }
@@ -168,9 +169,9 @@ class ImportAnalytics extends AbstractCommand
 
         // Create the OrderBy object
         $ordering = new OrderBy();
-        $ordering->setFieldName("ga:pageviews");
-        $ordering->setOrderType("VALUE");
-        $ordering->setSortOrder("DESCENDING");
+        $ordering->setFieldName('ga:pageviews');
+        $ordering->setOrderType('VALUE');
+        $ordering->setSortOrder('DESCENDING');
 
         // Create the ReportRequest object
         $request = new ReportRequest();
@@ -206,14 +207,15 @@ class ImportAnalytics extends AbstractCommand
         // Batch five pages of queries together
         for ($i = 0; $i < 5; $i++) {
             $request = null;
-            if ($pageToken == 0 && $i == 0) {
+
+            if ($pageToken === 0 && $i === 0) {
                 $request = $this->getPaginatedRequest(null, $startDate);
             }
             else {
-                $request = $this->getPaginatedRequest("" .(($i*1000) + $pageToken), $startDate);
+                $request = $this->getPaginatedRequest('' . (($i * 1000) + $pageToken), $startDate);
             }
             $report = $this->getReport($request, $analytics);
-            $batch->add($report, "starting-at-".(($i*1000) + $pageToken));
+            $batch->add($report, 'starting-at-' . (($i * 1000) + $pageToken));
         }
 
         return $batch;
@@ -223,7 +225,7 @@ class ImportAnalytics extends AbstractCommand
 
         // Wrap our request in a multi-request clause (required?)
         $body = new GetReportsRequest();
-        $body->setReportRequests( array($request) );
+        $body->setReportRequests([$request]);
 
         // Issue the request and grab the response
         return $analytics->reports->batchGet($body);
@@ -233,11 +235,11 @@ class ImportAnalytics extends AbstractCommand
     protected function isSuccessful($results) {
         foreach ($results as $batchResult) {
             if (!property_exists($batchResult, 'reports')) {
-                if ($batchResult->getCode() == 429
+                if ($batchResult->getCode() === 429
                     && $batchResult->getErrors()
-                    && $batchResult->getErrors()[0]['reason'] == 'rateLimitExceeded') {
-                    $this->info(Carbon::now()->toDateTimeString() .': Rate limit exceeded. Sleep one hour before trying again');
-                    usleep(1000000*60*60 + rand(1000, 1000000));
+                    && $batchResult->getErrors()[0]['reason'] === 'rateLimitExceeded') {
+                    $this->info(Carbon::now()->toDateTimeString() . ': Rate limit exceeded. Sleep one hour before trying again');
+                    usleep(1000000 * 60 * 60 + rand(1000, 1000000));
                 }
                 return false;
             }
@@ -249,13 +251,14 @@ class ImportAnalytics extends AbstractCommand
     protected function isDone($results) {
 
         $rows = 0;
+
         foreach ($results as $batchResult) {
             $report = $batchResult->reports[0];
 
             $rows += count($report->getData()->getRows());
         }
 
-        return $rows == 0;
+        return $rows === 0;
 
     }
 
@@ -265,7 +268,8 @@ class ImportAnalytics extends AbstractCommand
             $report = $batchResult->reports[0];
 
             $rows = $report->getData()->getRows();
-            foreach( $rows as $row ) {
+
+            foreach($rows as $row) {
                 $dimensions = $row->getDimensions();
                 $metrics = $row->getMetrics();
 
@@ -288,7 +292,7 @@ class ImportAnalytics extends AbstractCommand
 
     protected function saveReport() {
 
-        foreach( $this->pageviews as $objectId => $views ) {
+        foreach ($this->pageviews as $objectId => $views) {
 
             if ($objectId) {
 
@@ -298,7 +302,7 @@ class ImportAnalytics extends AbstractCommand
                 $artwork->save();
 
                 $row = [
-                    'Page' => '/artworks/' .$objectId,
+                    'Page' => '/artworks/' . $objectId,
                     'Pageviews' => number_format($views),
                 ];
 
@@ -320,7 +324,7 @@ class ImportAnalytics extends AbstractCommand
     // https://stackoverflow.com/a/1760579
     protected function prepend($string, $orig_filename) {
         $context = stream_context_create();
-        $orig_file = fopen($orig_filename, 'r', 1, $context);
+        $orig_file = fopen($orig_filename, 'rb', 1, $context);
 
         $temp_filename = tempnam(sys_get_temp_dir(), 'php_prepend_');
         file_put_contents($temp_filename, $string);

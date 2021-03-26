@@ -13,7 +13,7 @@ class ImportArtworks extends AbstractCommand
 
     protected $signature = 'import:artworks';
 
-    protected $description = "Imports artworks from the data aggregator";
+    protected $description = 'Imports artworks from the data aggregator';
 
     public function handle()
     {
@@ -35,7 +35,7 @@ class ImportArtworks extends AbstractCommand
 
     }
 
-    protected function save( $datum, $model )
+    protected function save($datum, $model)
     {
 
         $artwork = $model::findOrNew($datum->id);
